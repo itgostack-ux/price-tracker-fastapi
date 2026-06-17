@@ -2,46 +2,47 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from app.database import engine
-from app.schemas.competitor import CompetitorSaveRequest
+from app.schemas.platform import PlatformSaveRequest
 
 router = APIRouter(
-    prefix="/competitors",
-    tags=["Competitors"]
+    prefix="/platforms",
+    tags=["Platform Master"]
 )
 
 # GET ALL
 @router.get("/")
-def get_competitors():
+def get_platforms():
 
     with engine.connect() as conn:
 
         result = conn.execute(text("""
             SELECT
-                CompetitorID,
-                CompetitorName,
-                WebsiteURL,
-                IsActive,
-                CreatedOn
-            FROM Competitors
-            ORDER BY CompetitorName
+                PlatformID,
+                PlatformCode,
+                PlatformName,
+                IsEnabled,
+                BaseURL,
+                CollectorType
+            FROM PlatformMaster
+            ORDER BY PlatformName
         """))
 
         return [dict(row._mapping) for row in result]
 
 
 # GET BY ID
-@router.get("/{competitor_id}")
-def get_competitor(competitor_id: int):
+@router.get("/{platform_id}")
+def get_platform(platform_id: int):
 
     with engine.connect() as conn:
 
         result = conn.execute(
             text("""
                 SELECT *
-                FROM Competitors
-                WHERE CompetitorID = :CompetitorID
+                FROM PlatformMaster
+                WHERE PlatformID = :PlatformID
             """),
-            {"CompetitorID": competitor_id}
+            {"PlatformID": platform_id}
         )
 
         row = result.mappings().first()
@@ -49,7 +50,7 @@ def get_competitor(competitor_id: int):
         if not row:
             return {
                 "success": False,
-                "message": "Competitor Not Found"
+                "message": "Platform Not Found"
             }
 
         return dict(row)
@@ -57,30 +58,34 @@ def get_competitor(competitor_id: int):
 
 # ADD / UPDATE / DISABLE
 @router.post("/save")
-def save_competitor(payload: CompetitorSaveRequest):
+def save_platform(payload: PlatformSaveRequest):
 
     data = payload.model_dump()
 
-    competitor_id = data.get("CompetitorID")
+    platform_id = data.get("PlatformID")
 
     with engine.begin() as conn:
 
         # ADD
-        if not competitor_id:
+        if not platform_id:
 
             conn.execute(
                 text("""
-                    INSERT INTO Competitors
+                    INSERT INTO PlatformMaster
                     (
-                        CompetitorName,
-                        WebsiteURL,
-                        IsActive
+                        PlatformCode,
+                        PlatformName,
+                        IsEnabled,
+                        BaseURL,
+                        CollectorType
                     )
                     VALUES
                     (
-                        :CompetitorName,
-                        :WebsiteURL,
-                        1
+                        :PlatformCode,
+                        :PlatformName,
+                        1,
+                        :BaseURL,
+                        :CollectorType
                     )
                 """),
                 data
@@ -88,39 +93,42 @@ def save_competitor(payload: CompetitorSaveRequest):
 
             return {
                 "success": True,
-                "message": "Competitor Added Successfully"
+                "message": "Platform Added Successfully"
             }
 
         # DISABLE
-        if data.get("IsActive") == 0:
+        if data.get("IsEnabled") == 0:
 
             conn.execute(
                 text("""
-                    UPDATE Competitors
-                    SET IsActive = 0
-                    WHERE CompetitorID = :CompetitorID
+                    UPDATE PlatformMaster
+                    SET IsEnabled = 0
+                    WHERE PlatformID = :PlatformID
                 """),
-                {"CompetitorID": competitor_id}
+                {"PlatformID": platform_id}
             )
 
             return {
                 "success": True,
-                "message": "Competitor Disabled Successfully"
+                "message": "Platform Disabled Successfully"
             }
 
         # UPDATE
         conn.execute(
             text("""
-                UPDATE Competitors
+                UPDATE PlatformMaster
                 SET
-                    CompetitorName = :CompetitorName,
-                    WebsiteURL = :WebsiteURL
-                WHERE CompetitorID = :CompetitorID
+                    PlatformCode = :PlatformCode,
+                    PlatformName = :PlatformName,
+                    BaseURL = :BaseURL,
+                    CollectorType = :CollectorType,
+                    IsEnabled = :IsEnabled
+                WHERE PlatformID = :PlatformID
             """),
             data
         )
 
         return {
             "success": True,
-            "message": "Competitor Updated Successfully"
+            "message": "Platform Updated Successfully"
         }

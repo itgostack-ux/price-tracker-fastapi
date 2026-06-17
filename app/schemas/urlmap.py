@@ -1,16 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from typing import Optional
+
 
 class UrlMapSaveRequest(BaseModel):
     UrlMapID: Optional[int] = None
 
-    ProductID: Optional[int] = None
-    CompetitorID: Optional[int] = None
+    ProductID: int
+    CompetitorID: int
 
-    CompetitorProductName: Optional[str] = None
-    CompetitorProductURL: Optional[str] = None
+    CompetitorProductName: str
+    CompetitorProductURL: str
 
-    CurrentPrice: Optional[float] = None
-    CurrentMRP: Optional[float] = None
 
-    IsActive: Optional[int] = 1
+
+    IsActive: int = 1

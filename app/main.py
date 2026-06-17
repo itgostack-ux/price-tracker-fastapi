@@ -3,6 +3,8 @@ from sqlalchemy import text
 from app.routers.products import router as products_router
 from app.routers.competitors import router as competitors_router
 from app.routers.urlmap import router as urlmap_router
+from app.routers import price_comparison
+from app.routers import price_history
 
 
 from app.database import engine
@@ -35,8 +37,6 @@ def health_check():
 
 
 app.include_router(products_router)
-
 app.include_router(competitors_router)
-
-
 app.include_router(urlmap_router)
+app.include_router(price_comparison.router)

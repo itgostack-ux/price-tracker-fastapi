@@ -2,46 +2,147 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from app.database import engine
-from app.schemas.urlmap import UrlMapSaveRequest
+from app.schemas.product_platform import ProductPlatformSaveRequest
 
 router = APIRouter(
-    prefix="/urlmap",
-    tags=["URL Map"]
+    prefix="/product-platform",
+    tags=["Product Platform"]
 )
 
+
+# =====================================================
+# GET ALL
+# =====================================================
+@router.get("/")
+def get_product_platforms():
+
+    with engine.connect() as conn:
+
+        result = conn.execute(text("""
+            SELECT
+                PP.ProductPlatformID,
+
+                PM.ProductID,
+                PM.ItemCode,
+                PM.ItemName,
+
+                PL.PlatformID,
+                PL.PlatformCode,
+                PL.PlatformName,
+
+                PP.ProductURL,
+                PP.LastVerified,
+                PP.IsActive,
+                PP.URLStatus,
+                PP.MatchScore,
+                PP.MatchMethod,
+                PP.VerificationStatus
+
+            FROM ProductPlatform PP
+            INNER JOIN ProductMaster PM
+                ON PM.ProductID = PP.ProductID
+            INNER JOIN PlatformMaster PL
+                ON PL.PlatformID = PP.PlatformID
+
+            ORDER BY PP.ProductPlatformID DESC
+        """))
+
+        return [dict(row._mapping) for row in result]
+
+
+# =====================================================
+# GET BY ID
+# =====================================================
+@router.get("/{product_platform_id}")
+def get_product_platform(product_platform_id: int):
+
+    with engine.connect() as conn:
+
+        result = conn.execute(
+            text("""
+                SELECT
+                    PP.ProductPlatformID,
+
+                    PM.ProductID,
+                    PM.ItemCode,
+                    PM.ItemName,
+
+                    PL.PlatformID,
+                    PL.PlatformCode,
+                    PL.PlatformName,
+
+                    PP.ProductURL,
+                    PP.LastVerified,
+                    PP.IsActive,
+                    PP.URLStatus,
+                    PP.MatchScore,
+                    PP.MatchMethod,
+                    PP.VerificationStatus
+
+                FROM ProductPlatform PP
+                INNER JOIN ProductMaster PM
+                    ON PM.ProductID = PP.ProductID
+                INNER JOIN PlatformMaster PL
+                    ON PL.PlatformID = PP.PlatformID
+
+                WHERE PP.ProductPlatformID = :ProductPlatformID
+            """),
+            {"ProductPlatformID": product_platform_id}
+        )
+
+        row = result.mappings().first()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "Product Platform Not Found"
+            }
+
+        return dict(row)
+
+
+# =====================================================
+# ADD / UPDATE / DISABLE
+# =====================================================
 @router.post("/save")
-def save_urlmap(payload: UrlMapSaveRequest):
+def save_product_platform(payload: ProductPlatformSaveRequest):
 
     data = payload.model_dump()
 
-    urlmap_id = data.get("UrlMapID")
+    product_platform_id = data.get("ProductPlatformID")
 
     with engine.begin() as conn:
 
+        # ---------------------------------------------
         # ADD
-        if not urlmap_id:
+        # ---------------------------------------------
+        if not product_platform_id:
 
             conn.execute(
                 text("""
-                    INSERT INTO CompetitorUrlMap
+                    INSERT INTO ProductPlatform
                     (
                         ProductID,
-                        CompetitorID,
-                        CompetitorProductName,
-                        CompetitorProductURL,
-                        CurrentPrice,
-                        CurrentMRP,
-                        IsActive
+                        PlatformID,
+                        ProductURL,
+                        LastVerified,
+                        IsActive,
+                        URLStatus,
+                        MatchScore,
+                        MatchMethod,
+                        VerificationStatus
                     )
                     VALUES
                     (
                         :ProductID,
-                        :CompetitorID,
-                        :CompetitorProductName,
-                        :CompetitorProductURL,
-                        :CurrentPrice,
-                        :CurrentMRP,
-                        1
+                        :PlatformID,
+                        :ProductURL,
+                        GETDATE(),
+                        1,
+                        :URLStatus,
+                        :MatchScore,
+                        :MatchMethod,
+                        :VerificationStatus
                     )
                 """),
                 data
@@ -49,67 +150,96 @@ def save_urlmap(payload: UrlMapSaveRequest):
 
             return {
                 "success": True,
-                "message": "URL Map Added Successfully"
+                "message": "Product Platform Added Successfully"
             }
 
+        # ---------------------------------------------
         # DISABLE
+        # ---------------------------------------------
         if data.get("IsActive") == 0:
 
             conn.execute(
                 text("""
-                    UPDATE CompetitorUrlMap
-                    SET IsActive = 0
-                    WHERE UrlMapID = :UrlMapID
+                    UPDATE ProductPlatform
+                    SET
+                        IsActive = 0
+                    WHERE ProductPlatformID = :ProductPlatformID
                 """),
-                {"UrlMapID": urlmap_id}
+                {"ProductPlatformID": product_platform_id}
             )
 
             return {
                 "success": True,
-                "message": "URL Map Disabled Successfully"
+                "message": "Product Platform Disabled Successfully"
             }
 
+        # ---------------------------------------------
         # UPDATE
+        # ---------------------------------------------
         conn.execute(
             text("""
-                UPDATE CompetitorUrlMap
+                UPDATE ProductPlatform
                 SET
                     ProductID = :ProductID,
-                    CompetitorID = :CompetitorID,
-                    CompetitorProductName = :CompetitorProductName,
-                    CompetitorProductURL = :CompetitorProductURL,
-                    CurrentPrice = :CurrentPrice,
-                    CurrentMRP = :CurrentMRP
-                WHERE UrlMapID = :UrlMapID
+                    PlatformID = :PlatformID,
+                    ProductURL = :ProductURL,
+                    LastVerified = GETDATE(),
+                    URLStatus = :URLStatus,
+                    MatchScore = :MatchScore,
+                    MatchMethod = :MatchMethod,
+                    VerificationStatus = :VerificationStatus,
+                    IsActive = :IsActive
+                WHERE ProductPlatformID = :ProductPlatformID
             """),
             data
         )
 
         return {
             "success": True,
-            "message": "URL Map Updated Successfully"
+            "message": "Product Platform Updated Successfully"
         }
 
-@router.get("/")
-def get_urlmaps():
+
+# =====================================================
+# ACTIVE RECORDS ONLY
+# =====================================================
+@router.get("/active/list")
+def get_active_product_platforms():
 
     with engine.connect() as conn:
 
         result = conn.execute(text("""
             SELECT
-                U.UrlMapID,
-                P.ItemName,
-                C.CompetitorName,
-                U.CompetitorProductURL,
-                U.CurrentPrice,
-                U.CurrentMRP,
-                U.IsActive
-            FROM CompetitorUrlMap U
-            INNER JOIN ProductMaster P
-                ON P.ProductID = U.ProductID
-            INNER JOIN Competitors C
-                ON C.CompetitorID = U.CompetitorID
-            ORDER BY U.UrlMapID DESC
+                PP.ProductPlatformID,
+
+                PM.ProductID,
+                PM.ItemCode,
+                PM.ItemName,
+
+                PL.PlatformID,
+                PL.PlatformCode,
+                PL.PlatformName,
+
+                PP.ProductURL,
+                PP.LastVerified,
+                PP.URLStatus,
+                PP.MatchScore,
+                PP.MatchMethod,
+                PP.VerificationStatus
+
+            FROM ProductPlatform PP
+            INNER JOIN ProductMaster PM
+                ON PM.ProductID = PP.ProductID
+            INNER JOIN PlatformMaster PL
+                ON PL.PlatformID = PP.PlatformID
+
+            WHERE
+                PP.IsActive = 1
+                AND PL.IsEnabled = 1
+
+            ORDER BY
+                PM.ItemCode,
+                PL.PlatformName
         """))
 
         return [dict(row._mapping) for row in result]
