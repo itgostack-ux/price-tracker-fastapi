@@ -19,6 +19,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://155.117.46.151:3000",
+        "https://price-intel-dashboard.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
