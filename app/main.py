@@ -14,6 +14,7 @@ app = FastAPI(
     title="Price Tracker API"
 )
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -25,7 +26,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 @app.get("/")
 def root():
     return {"message": "Price Tracker API Running"}

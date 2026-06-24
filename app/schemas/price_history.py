@@ -2,7 +2,12 @@ from pydantic import BaseModel
 from typing import Optional
 
 class PriceHistorySaveRequest(BaseModel):
-    PriceHistoryID: Optional[int] = None
-    UrlMapID: int
-    Competitor_Price: float
+    PriceID: Optional[int] = None
+    ProductID: Optional[int] = None
+    PlatformID: Optional[int] = None
+    VerifiedID: Optional[int] = None
+    Price: Optional[float] = None
     MRP: Optional[float] = None
+    Discount: Optional[float] = None
+    Source: Optional[str] = None
+    IsDeleted: Optional[int] = 0
