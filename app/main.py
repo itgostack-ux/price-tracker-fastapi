@@ -2,18 +2,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
+from app.database import engine
+
 from app.routers.products import router as products_router
 from app.routers.competitors import router as competitors_router
 from app.routers.urlmap import router as urlmap_router
+
+from app.routers import producturlmapmaster
 from app.routers import price_comparison
 from app.routers import price_history
 
-from app.database import engine
+from app.routers.PlatformUrlPriceHistoryMaster import (
+    router as platform_price_history
+)
 
 app = FastAPI(
     title="Price Tracker API"
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,12 +31,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 @app.get("/")
 def root():
-    return {"message": "Price Tracker API Running"}
+    return {
+        "message": "Price Tracker API Running"
+    }
+
 
 @app.get("/health")
 def health_check():
+
     with engine.connect() as conn:
         result = conn.execute(text("SELECT DB_NAME()"))
         db_name = result.scalar()
@@ -41,8 +52,17 @@ def health_check():
         "status": "connected"
     }
 
+
+# Routers
 app.include_router(products_router)
 app.include_router(competitors_router)
 app.include_router(urlmap_router)
+
 app.include_router(price_comparison.router)
 app.include_router(price_history.router)
+
+app.include_router(producturlmapmaster.router)
+
+# Platform Price History Router
+# Platform Price History Router
+app.include_router(platform_price_history)

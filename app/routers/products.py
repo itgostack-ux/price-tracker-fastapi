@@ -144,7 +144,8 @@ def save_product(payload: ProductSaveRequest):
                     VariantName = :VariantName,
                     ItemName = :ItemName,
                     Category = :Category,
-                    SubCategory = :SubCategory
+                    SubCategory = :SubCategory,
+                   IsActive = :IsActive
                 WHERE ProductID = :ProductID
             """),
             data
