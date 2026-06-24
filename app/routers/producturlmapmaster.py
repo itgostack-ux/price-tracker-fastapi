@@ -9,36 +9,57 @@ router = APIRouter(
     tags=["Product Platform URL"]
 )
 
-@router.get("/{product_platform_id}")
-def get_product_platform_url(product_platform_id: int):
+@router.get("/product/{product_id}")
+def get_product_urls(product_id: int):
 
     with engine.connect() as conn:
 
         result = conn.execute(
             text("""
                 SELECT
-                    ProductPlatformID,
-                    ProductID,
-                    PlatformID,
-                    ProductURL,
-                    IsActive,
-                    CreatedOn
-                FROM ProductPlatformURLMaster
-                WHERE ProductPlatformID = :ProductPlatformID
+                    PM.ProductID,
+                    PM.ItemName,
+                    PM.Brand,
+                    PM.ModelName,
+                    PPU.ProductPlatformID,
+                    PL.PlatformID,
+                    PL.PlatformName,
+                    PPU.ProductURL
+                FROM ProductPlatformURLMaster PPU
+                INNER JOIN ProductMaster PM
+                    ON PPU.ProductID = PM.ProductID
+                INNER JOIN PlatformMaster PL
+                    ON PPU.PlatformID = PL.PlatformID
+                WHERE PM.ProductID = :ProductID
+                ORDER BY PL.PlatformName
             """),
-            {"ProductPlatformID": product_platform_id}
+            {"ProductID": product_id}
         )
 
-        row = result.mappings().first()
+        rows = [dict(row._mapping) for row in result]
 
-        if not row:
+        if not rows:
             return {
                 "success": False,
-                "message": "Product Platform URL Not Found"
+                "message": "No Platform URLs Found"
             }
 
-        return dict(row)
-
+        return {
+            "success": True,
+            "ProductID": rows[0]["ProductID"],
+            "ItemName": rows[0]["ItemName"],
+            "Brand": rows[0]["Brand"],
+            "ModelName": rows[0]["ModelName"],
+            "Platforms": [
+                {
+                    "ProductPlatformID": row["ProductPlatformID"],
+                    "PlatformID": row["PlatformID"],
+                    "PlatformName": row["PlatformName"],
+                    "ProductURL": row["ProductURL"]
+                }
+                for row in rows
+            ]
+        }
 @router.post("/save")
 def save_product_platform_url(payload: ProductPlatformURLSaveRequest):
 
