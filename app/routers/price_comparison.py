@@ -11,7 +11,7 @@ router = APIRouter(
 def get_price_comparison():
     with engine.connect() as conn:
         result = conn.execute(
-            text("EXEC dbo.usp_CompetitorPriceComparison")
+            text("EXEC dbo.usp_ProductPriceComparison")
         )
 
         columns = result.keys()
