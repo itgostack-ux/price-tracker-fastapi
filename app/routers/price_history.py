@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from sqlalchemy import text
-
+from app.database import engine, winpos_engine
 from app.database import engine
 from app.schemas.price_history import PriceHistorySaveRequest
 
@@ -161,3 +161,29 @@ def get_product_price_history(product_id: int):
         })
 
     return response
+   
+@router.get("/ipos-price")
+def get_ipos_prices():
+
+    with winpos_engine.connect() as conn:
+
+        result = conn.execute(
+            text("""
+                SELECT TOP (500)
+                    ItemCode,
+                    ItemName,
+                    SalePrice
+                FROM ItemMaster
+                WHERE Active = 'Y'
+                  AND CategoryId IN (1,2)
+                ORDER BY ItemName
+            """)
+        )
+
+        rows = [dict(row._mapping) for row in result]
+
+        return {
+            "success": True,
+            "count": len(rows),
+            "data": rows
+        }
